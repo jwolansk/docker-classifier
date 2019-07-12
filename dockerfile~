@@ -1,0 +1,5 @@
+FROM objectrecognitionimage:latest
+
+COPY recognize.py /src/recognize.py
+
+CMD "sleep 5 && while inotifywait -e close_write /data/snapshot.jpg; do python /src/recognize.py; done"

@@ -1,0 +1,7 @@
+#!/bin/sh
+git pull
+
+docker rm objectrecognition
+docker build -t objectrecognition .
+
+docker run -d --name objectrecognition -v objectrecognition:/data/ -v model:/model/ objectrecognition:latest
