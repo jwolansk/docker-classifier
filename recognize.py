@@ -51,7 +51,7 @@ class Watcher():
 
             # Convert to Numpy Array
             x = img_to_array(img)
-            x = x.reshape((image_width, image_height, 3))
+            x = x.reshape((image_height, image_width, 3))
             # Normalize
             x = x / 256.0
             imagedata[0] = x
