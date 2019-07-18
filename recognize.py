@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 import sys
 
 import time
-import Queue
+import queue
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
@@ -22,7 +22,7 @@ class Watcher():
         self.observer = Observer()
 
     def run(self, path):
-        q = Queue.LifoQueue(10)
+        q = queue.LifoQueue(10)
         event_handler = Handler(q=q, ignore_patterns=['/data/detected.jpg', '/data/gate/lastmove.jpg', '*.DS_Store'])
 
         # load train and test dataset
