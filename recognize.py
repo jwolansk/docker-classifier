@@ -37,9 +37,10 @@ class Watcher():
             imagedata = np.ndarray(shape=(1, image_height, image_width, channels),
                                    dtype=np.float32)
             try:
-                img = load_img(file).resize((640, 480))  # this is a PIL image
+                img = load_img(file)  # this is a PIL image
             except:
                 print("error loading " + file)
+            img = img.resize((640, 480))
             ratio = img.size[0] / img.size[1]
             img = img.resize((int(ratio * image_height), image_height))
             left = int((ratio * image_height - image_width) / 2)
