@@ -38,7 +38,8 @@ class Watcher():
                                    dtype=np.float32)
             try:
                 img = load_img(file)  # this is a PIL image
-            except:
+            except Exception as e:
+                print(e)
                 print("error loading " + file)
             img = img.resize((640, 480))
             ratio = img.size[0] / img.size[1]
