@@ -110,9 +110,8 @@ class Watcher():
 
                             subprocess.call("mkdir /data/gate/" + classes[result] + "&> /dev/null", shell=True)
                             subprocess.call("mv '" + path + "' /data/gate/" + classes[result], shell=True)
-                    else:
-                        subprocess.call("mkdir /data/gate/" + movement_classes[result] + "&> /dev/null", shell=True)
-                        subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[result], shell=True)
+                    subprocess.call("mkdir /data/gate/" + movement_classes[result] + "&> /dev/null", shell=True)
+                    subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[result], shell=True)
                 else:
 
                     time.sleep(0.5)
