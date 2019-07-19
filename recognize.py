@@ -40,8 +40,7 @@ class Watcher():
                 img = Image.open(file)  # this is a PIL image
             except Exception as e:
                 print(e)
-                print("error loading " + file)
-            img = img.resize((640, 480))
+            # img = img.resize((640, 480))
             ratio = img.size[0] / img.size[1]
             img = img.resize((int(ratio * image_height), image_height))
             left = int((ratio * image_height - image_width) / 2)
@@ -116,7 +115,7 @@ class Watcher():
                     subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[movement_result], shell=True)
                 else:
 
-                    time.sleep(0.5)
+                    time.sleep(1.0)
         except KeyboardInterrupt:
             print("stop")
         self.observer.join()
