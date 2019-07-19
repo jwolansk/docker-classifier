@@ -96,7 +96,7 @@ class Watcher():
 
                             client = mqtt.Client()
                             client.connect("192.168.1.253", 1883, 60)
-                            client.publish("gate/object", movement_classes[result])
+                            client.publish("gate/object", movement_classes[movement_result])
 
                             probs = objects.predict(data)
                             print("--- objects prediction: %s ---" % (time.time() - start_time))
