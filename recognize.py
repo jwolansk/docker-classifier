@@ -37,7 +37,7 @@ class Watcher():
             imagedata = np.ndarray(shape=(1, image_height, image_width, channels),
                                    dtype=np.float32)
             try:
-                img = Image.load(file)  # this is a PIL image
+                img = Image.open(file)  # this is a PIL image
             except Exception as e:
                 print(e)
                 print("error loading " + file)
