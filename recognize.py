@@ -85,13 +85,13 @@ class Watcher():
                     probs = movement.predict(data)
                     print("--- movement prediction: %s ---" % (time.time() - start_time))
 
-                    result = probs.argmax(axis=-1)[0]
+                    movement_result = probs.argmax(axis=-1)[0]
 
-                    print(path + ' ' + movement_classes[result])
+                    print(path + ' ' + movement_classes[movement_result])
                     print(probs)
 
-                    if probs[0][result] > 0.90:
-                        if movement_classes[result] == 'yes':
+                    if probs[0][movement_result] > 0.90:
+                        if movement_classes[movement_result] == 'yes':
                             subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
                             client = mqtt.Client()
@@ -110,8 +110,8 @@ class Watcher():
 
                             subprocess.call("mkdir /data/gate/" + classes[result] + "&> /dev/null", shell=True)
                             subprocess.call("mv '" + path + "' /data/gate/" + classes[result], shell=True)
-                    subprocess.call("mkdir /data/gate/" + movement_classes[result] + "&> /dev/null", shell=True)
-                    subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[result], shell=True)
+                    subprocess.call("mkdir /data/gate/" + movement_classes[movement_result] + "&> /dev/null", shell=True)
+                    subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[movement_result], shell=True)
                 else:
 
                     time.sleep(0.5)
