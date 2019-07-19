@@ -115,7 +115,7 @@ class Watcher():
                     subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[movement_result], shell=True)
                 else:
 
-                    time.sleep(1.0)
+                    time.sleep(0.5)
         except KeyboardInterrupt:
             print("stop")
         self.observer.join()
