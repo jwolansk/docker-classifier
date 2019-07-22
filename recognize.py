@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 import sys
 
 import time
-import Queue
+import queue
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
@@ -22,14 +22,14 @@ class Watcher():
         self.observer = Observer()
 
     def run(self, path):
-        q = Queue.LifoQueue(10)
-        event_handler = Handler(q=q, ignore_patterns=['/data/detected.jpg', '/data/gate/lastmove.jpg', '*.DS_Store'])
+        q = queue.LifoQueue(10)
+        event_handler = Handler(q=q, ignore_patterns=['/data/detected.jpg', '/data/gate/lastmove.jpg', '*.DS_Store', '*.mp4'])
 
         # load train and test dataset
         def load_data(file):
 
-            image_width = 100
-            image_height = 100
+            image_width = 106
+            image_height = 80
 
             channels = 3
             nb_classes = 11
@@ -38,8 +38,9 @@ class Watcher():
                                    dtype=np.float32)
             try:
                 img = load_img(file)  # this is a PIL image
-            except:
-                print("error loading " + file)
+            except Exception as e:
+                print(e)
+            # img = img.resize((640, 480))
             ratio = img.size[0] / img.size[1]
             img = img.resize((int(ratio * image_height), image_height))
             left = int((ratio * image_height - image_width) / 2)
@@ -51,7 +52,7 @@ class Watcher():
 
             # Convert to Numpy Array
             x = img_to_array(img)
-            x = x.reshape((image_width, image_height, 3))
+            x = x.reshape((image_height, image_width, 3))
             # Normalize
             x = x / 256.0
             imagedata[0] = x
@@ -61,14 +62,15 @@ class Watcher():
         # load model
         folder = "/data/gate/"
 
-        model = load_model('/model/model.h5')
+        movement = load_model('/model/model.h5')
+        objects = load_model('model/model_objects.h5')
         # summarize model.
         # model.summary()
 
-        # classes = ['ania', 'kuba', 'van', 'trash', 'opel', 'night', 'post', 'background']
-        classes = ['yes', 'no']
+        classes = ['person', 'caratnight', 'bike', 'van', 'opel', 'truck', 'personpassing', 'carturningin', 'vanpassing', 'carpassing']
+        movement_classes = ['yes', 'no']
 
-        print("model loaded")
+        print("movement model loaded")
         self.observer.schedule(event_handler, path, recursive=True)
         self.observer.start()
         print("handler started")
@@ -81,24 +83,35 @@ class Watcher():
 
                     start_time = time.time()
                     # result = model.predict_classes(data)[0]
-                    probs = model.predict(data)
-                    print("--- prediction: %s ---" % (time.time() - start_time))
+                    probs = movement.predict(data)
+                    print("--- movement prediction: %s ---" % (time.time() - start_time))
 
-                    result = probs.argmax(axis=-1)[0]
+                    movement_result = probs.argmax(axis=-1)[0]
 
-                    print(path + ' ' + classes[result])
+                    print(path + ' ' + movement_classes[movement_result])
                     print(probs)
 
-                    if probs[0][result] > 0.90:
-                        if classes[result] == 'yes':
-                            subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                    if probs[0][movement_result] > 0.90:
+                        if movement_classes[movement_result] == 'yes':
 
-                        client = mqtt.Client()
-                        client.connect("192.168.1.253", 1883, 60)
-                        client.publish("gate/object", classes[result])
+                            client = mqtt.Client()
+                            client.connect("192.168.1.253", 1883, 60)
+                            client.publish("gate/object", movement_classes[movement_result])
 
-                    subprocess.call("mkdir /data/gate/ &> /dev/null" + classes[result], shell=True)
-                    subprocess.call("mv '" + path + "' /data/gate/" + classes[result], shell=True)
+                            probs = objects.predict(data)
+                            print("--- objects prediction: %s ---" % (time.time() - start_time))
+
+                            result = probs.argmax(axis=-1)[0]
+
+                            print(path + ' ' + classes[result])
+                            print(probs)
+                            if probs[0][result] > 0.90:
+                                client.publish("gate/object", classes[result])
+
+                            subprocess.call("mkdir /data/gate/" + classes[result] + "&> /dev/null", shell=True)
+                            subprocess.call("mv '" + path + "' /data/gate/" + classes[result], shell=True)
+                    subprocess.call("mkdir /data/gate/" + movement_classes[movement_result] + "&> /dev/null", shell=True)
+                    subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[movement_result], shell=True)
                 else:
 
                     time.sleep(0.5)
