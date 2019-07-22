@@ -91,7 +91,7 @@ class Watcher():
 
                     if probs[0][result] > 0.90:
                         if classes[result] == 'yes':
-                            subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                            subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
                         client = mqtt.Client()
                         client.connect("192.168.1.253", 1883, 60)
