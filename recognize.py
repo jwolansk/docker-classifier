@@ -97,6 +97,8 @@ class Watcher():
                     if probs[0][movement_result] > 0.90:
                         if movement_classes[movement_result] == 'yes':
 
+                            subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+
                             client = mqtt.Client()
                             client.connect("192.168.1.253", 1883, 60)
                             client.publish("gate/object", movement_classes[movement_result])
