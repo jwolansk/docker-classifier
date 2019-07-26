@@ -110,7 +110,7 @@ class Watcher():
 
                             print(path + ' ' + classes[result])
                             print(probs)
-                            if probs[0][result] > 0.90:
+                            if probs[0][result] > 0.95:
                                 client.publish("gate/object", classes[result])
 
                             subprocess.call("mkdir /data/gate/" + classes[result] + "&> /dev/null", shell=True)
