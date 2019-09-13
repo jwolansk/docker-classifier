@@ -28,8 +28,8 @@ class Watcher():
         # load train and test dataset
         def load_data(file):
 
-            image_width = 106
-            image_height = 80
+            image_width = 53
+            image_height = 40
 
             channels = 3
             nb_classes = 11
