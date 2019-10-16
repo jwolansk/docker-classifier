@@ -16,6 +16,7 @@ from watchdog.events import PatternMatchingEventHandler
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+CAMERA_NAME = "gatehigh"
 class Watcher():
 
     def __init__(self):
@@ -23,7 +24,7 @@ class Watcher():
 
     def run(self, path):
         q = queue.LifoQueue(10)
-        event_handler = Handler(q=q, ignore_patterns=['/data/detected.jpg', '/data/gate/lastmove.jpg', '*.DS_Store', '*.mp4'])
+        event_handler = Handler(q=q, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
 
         # load train and test dataset
         def load_data(file):
@@ -61,7 +62,7 @@ class Watcher():
             return imagedata
 
         # load model
-        folder = "/data/gate/"
+        folder = "/data/" + CAMERA_NAME + "/"
 
         movement = load_model('/model/model.h5')
         objects = load_model('model/model_objects.h5')
@@ -97,7 +98,8 @@ class Watcher():
                     if probs[0][movement_result] > 0.90:
                         if movement_classes[movement_result] == 'yes':
 
-                            subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                            # subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                            subprocess.call("cp '" + path + "' /data/" + CAMERA_NAME + "/lastmove.jpg", shell=True)
 
                             client = mqtt.Client()
                             client.connect("192.168.1.253", 1883, 60)
@@ -113,10 +115,10 @@ class Watcher():
                             if probs[0][result] > 0.85:
                                 client.publish("gate/object", classes[result])
 
-                            subprocess.call("mkdir /data/gate/" + classes[result] + "&> /dev/null", shell=True)
-                            subprocess.call("mv '" + path + "' /data/gate/" + classes[result], shell=True)
-                    subprocess.call("mkdir /data/gate/" + movement_classes[movement_result] + "&> /dev/null", shell=True)
-                    subprocess.call("mv '" + path + "' /data/gate/" + movement_classes[movement_result], shell=True)
+                            subprocess.call("mkdir /data/" + CAMERA_NAME + "/" + classes[result] + "&> /dev/null", shell=True)
+                            subprocess.call("mv '" + path + "' /data/" + CAMERA_NAME + "/" + classes[result], shell=True)
+                    subprocess.call("mkdir /data/" + CAMERA_NAME + "/" + movement_classes[movement_result] + "&> /dev/null", shell=True)
+                    subprocess.call("mv '" + path + "' /data/" + CAMERA_NAME + "/" + movement_classes[movement_result], shell=True)
                 else:
 
                     time.sleep(0.5)
@@ -147,5 +149,5 @@ class Handler(PatternMatchingEventHandler):
 if __name__ == '__main__':
 
     w = Watcher()
-    w.run("/data/gate/")
+    w.run("/data/" + CAMERA_NAME + "/")
 
