@@ -1,1 +1,4 @@
 .idea
+model.*
+model_objects.*
+*~
