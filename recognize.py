@@ -1,6 +1,6 @@
 import numpy as np
-from keras.models import load_model
-from keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from PIL import Image
 import subprocess
 from subprocess import call
@@ -67,9 +67,9 @@ class Watcher():
         movement = load_model('/model/model.h5')
         objects = load_model('model/model_objects.h5')
         # summarize model.
-        # model.summary()
+        objects.summary()
 
-        classes = ['dupa', 'carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
+        classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
         movement_classes = ['yes', 'no']
 
         print("movement model loaded")
@@ -112,7 +112,7 @@ class Watcher():
 
                             print(path + ' ' + classes[result])
                             print(probs[0][result])
-                            if probs[0][result] > 0.85:
+                            if probs[0][result] > 0.70:
                                 client.publish("gate/object", classes[result])
 
                             subprocess.call("mkdir /data/" + CAMERA_NAME + "/" + classes[result] + "&> /dev/null", shell=True)

@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-docker build -t objectrecognition .
+docker build -t objectrecognition2 .
