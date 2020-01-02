@@ -69,7 +69,7 @@ class Watcher():
         # summarize model.
         # model.summary()
 
-        classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
+        classes = ['dupa', 'carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
         movement_classes = ['yes', 'no']
 
         print("movement model loaded")
