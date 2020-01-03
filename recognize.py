@@ -95,7 +95,7 @@ class Watcher():
                     print(path + ' ' + movement_classes[movement_result])
                     print(probs)
 
-                    if probs[0][movement_result] > 0.90:
+                    if probs[0][movement_result] > 0.75:
                         if movement_classes[movement_result] == 'yes':
 
                             subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
