@@ -19,11 +19,7 @@ RUN pip3 install numpy scipy
 RUN pip3 install scikit-learn
 RUN pip3 install pillow
 RUN pip3 install h5py
-#RUN pip3 install keras
 RUN pip3 install paho-mqtt
 RUN pip3 install watchdog
-
-#COPY recognize.py /src/recognize.py
-COPY run.sh /src/run.sh
 
 CMD "/model/run.sh"
