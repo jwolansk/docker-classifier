@@ -93,7 +93,7 @@ class Watcher():
 
                     movement_result = probs.argmax(axis=-1)[0]
 
-                    logString = path + ' ' + movement_classes[movement_result] + ' ' + str(probs[0][probs.argmax(axis=-1)[0]]) + " %.2f/" % (time.time() - start_time)
+                    logString = path + ' ' + movement_classes[movement_result] + ' ' + "%.2f %.2f" % (probs[0][probs.argmax(axis=-1)[0]], time.time() - start_time)
                     highProbMoving = False
 
                     if probs[0][movement_result] > 0.75:
@@ -109,11 +109,11 @@ class Watcher():
                             client.publish("gate/object", movement_classes[movement_result])
 
                             probs = objects.predict(data)
-                            logString = logString + "%.2f ---" % (time.time() - start_time) + " "
+                            logString = logString + "/%.2f ---" % (time.time() - start_time) + " "
 
                             result = probs.argmax(axis=-1)[0]
 
-                            logString = logString + ' ' + classes[result] + ' ' + str(probs[0][result])
+                            logString = logString + ' ' + classes[result] + ' ' + "%.2f" % probs[0][result]
                             if probs[0][result] > 0.50:
                                 client.publish("gate/object", classes[result])
                             classpath = "/data/" + CAMERA_NAME + "/" + classes[result]
