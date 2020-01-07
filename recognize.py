@@ -13,6 +13,8 @@ import queue
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
+import os.path
+
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -88,37 +90,44 @@ class Watcher():
                     start_time = time.time()
                     # result = model.predict_classes(data)[0]
                     probs = movement.predict(data)
-                    print("--- movement prediction: %s ---" % (time.time() - start_time))
 
                     movement_result = probs.argmax(axis=-1)[0]
 
-                    print(path + ' ' + movement_classes[movement_result])
-                    print(probs)
+                    logString = path + ' ' + movement_classes[movement_result] + ' ' + str(probs[0][probs.argmax(axis=-1)[0]]) + " %.2f/" % (time.time() - start_time)
+                    highProbMoving = False
 
                     if probs[0][movement_result] > 0.75:
                         if movement_classes[movement_result] == 'yes':
-
-                            subprocess.call("cp '" + path.replace("/gate/", "/gatehigh/") + "' /data/gate/lastmove.jpg || cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
-                            #subprocess.call("cp '" + path + "' /data/" + CAMERA_NAME + "/lastmove.jpg", shell=True)
+                            highFile = path.replace("/gate/", "/gatehigh/")
+                            if os.path.exists(highFile):
+                                subprocess.call("cp '" + highFile + "' /data/gate/lastmove.jpg", shell=True)
+                            else:
+                                subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
                             client = mqtt.Client()
                             client.connect("192.168.1.253", 1883, 60)
                             client.publish("gate/object", movement_classes[movement_result])
 
                             probs = objects.predict(data)
-                            print("--- objects prediction: %s ---" % (time.time() - start_time))
+                            logString = logString + "%.2f ---" % (time.time() - start_time) + " "
 
                             result = probs.argmax(axis=-1)[0]
 
-                            print(path + ' ' + classes[result])
-                            print(probs[0][result])
-                            if probs[0][result] > 0.70:
+                            logString = logString + ' ' + classes[result] + ' ' + str(probs[0][result])
+                            if probs[0][result] > 0.50:
                                 client.publish("gate/object", classes[result])
+                            classpath = "/data/" + CAMERA_NAME + "/" + classes[result]
+                            if not os.path.exists(classpath):
+                                subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
+                            subprocess.call("mv '" + path + "' " + classpath, shell=True)
+                            highProbMoving = True
+                    yesnopath = "/data/" + CAMERA_NAME + "/" + movement_classes[movement_result]
+                    if not os.path.exists(yesnopath):
+                        subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
+                    if not highProbMoving:
+                        subprocess.call("mv '" + path + "' " + yesnopath, shell=True)
 
-                            subprocess.call("mkdir /data/" + CAMERA_NAME + "/" + classes[result] + "&> /dev/null", shell=True)
-                            subprocess.call("mv '" + path + "' /data/" + CAMERA_NAME + "/" + classes[result], shell=True)
-                    subprocess.call("mkdir /data/" + CAMERA_NAME + "/" + movement_classes[movement_result] + "&> /dev/null", shell=True)
-                    subprocess.call("mv '" + path + "' /data/" + CAMERA_NAME + "/" + movement_classes[movement_result], shell=True)
+                    print(logString)
                 else:
 
                     time.sleep(0.5)
