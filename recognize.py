@@ -78,6 +78,10 @@ class Watcher():
         self.observer.schedule(event_handler, path, recursive=True)
         self.observer.start()
         print("handler started")
+
+        client = mqtt.Client("docker-classifier-2.0")
+        client.connect("192.168.1.253", 1883, 60)
+
         try:
             while True:
                 if not q.empty():
@@ -104,8 +108,6 @@ class Watcher():
                             else:
                                 subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
-                            client = mqtt.Client()
-                            client.connect("192.168.1.253", 1883, 60)
                             client.publish("gate/object", movement_classes[movement_result])
 
                             probs = objects.predict(data)
