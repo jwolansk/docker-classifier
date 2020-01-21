@@ -89,7 +89,8 @@ class Watcher():
         client.on_disconnect = on_disconnect
 
         try:
-            client.loop_forever()
+            while True:
+                client.loop(.1)
                 if not q.empty():
                     path = q.get()
 
