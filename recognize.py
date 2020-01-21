@@ -122,7 +122,7 @@ class Watcher():
                             result = probs.argmax(axis=-1)[0]
 
                             logString = logString + ' ' + classes[result] + ' ' + "%.2f" % probs[0][result]
-                            if probs[0][result] > 0.50:
+                            if probs[0][result] > 0.45:
                                 client.publish("gate/object", classes[result])
                             classpath = "/data/" + CAMERA_NAME + "/" + classes[result]
                             if not os.path.exists(classpath):
