@@ -82,8 +82,14 @@ class Watcher():
         client = mqtt.Client("docker-classifier-2.0")
         client.connect("192.168.1.253", 1883, 60)
 
+        def on_disconnect(client, userdata, rc):
+            if rc != 0:
+                print "Unexpected MQTT disconnection. Will auto-reconnect"
+
+        client.on_disconnect = on_disconnect
+
         try:
-            while True:
+            client.loop_forever()
                 if not q.empty():
                     path = q.get()
 
