@@ -35,14 +35,12 @@ class Watcher():
             image_height = 40
 
             channels = 3
-            nb_classes = 11
 
             imagedata = np.ndarray(shape=(1, image_height, image_width, channels),
                                    dtype=np.float32)
             try:
                 img = load_img(file)  # this is a PIL image
-            except Exception as e:
-                print(e)
+            except:
                 return None
             # img = img.resize((640, 480))
             ratio = img.size[0] / img.size[1]
@@ -89,8 +87,9 @@ class Watcher():
         client.on_disconnect = on_disconnect
 
         try:
+            client.loop_start()
             while True:
-                client.loop(.1)
+                # client.loop(.1)
                 if not q.empty():
                     path = q.get()
 
@@ -109,11 +108,11 @@ class Watcher():
 
                     if probs[0][movement_result] > 0.75:
                         if movement_classes[movement_result] == 'yes':
-                            highFile = path.replace("/gate/", "/gatehigh/")
-                            if os.path.exists(highFile):
-                                subprocess.call("cp '" + highFile + "' /data/gate/lastmove.jpg", shell=True)
-                            else:
-                                subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                            # highFile = path.replace("/gate/", "/gatehigh/")
+                            # if os.path.exists(highFile):
+                            #     subprocess.call("cp '" + highFile + "' /data/gate/lastmove.jpg", shell=True)
+                            # else:
+                            subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
                             client.publish("gate/object", movement_classes[movement_result])
 
@@ -137,9 +136,7 @@ class Watcher():
                         subprocess.call("mv '" + path + "' " + yesnopath, shell=True)
 
                     print(logString)
-                else:
 
-                    time.sleep(0.5)
         except KeyboardInterrupt:
             print("stop")
         self.observer.join()
