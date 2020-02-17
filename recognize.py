@@ -79,6 +79,7 @@ class Watcher():
 
         client = mqtt.Client("docker-classifier-2.0")
         client.connect("192.168.1.253", 1883, 60)
+        client.loop_start()
 
         def on_disconnect(client, userdata, rc):
             if rc != 0:
@@ -89,7 +90,6 @@ class Watcher():
         try:
             client.loop_start()
             while True:
-                # client.loop(.1)
                 if not q.empty():
                     path = q.get()
 
