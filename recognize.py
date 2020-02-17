@@ -85,7 +85,11 @@ class Watcher():
             if rc != 0:
                 print("Unexpected MQTT disconnection. Will auto-reconnect")
 
+        def on_connect(client, userdata, rc):
+            print("MQTT Client Connected")
+
         client.on_disconnect = on_disconnect
+        client.on_connect = on_connect
 
         try:
             client.loop_start()
