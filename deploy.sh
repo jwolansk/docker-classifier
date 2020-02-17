@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-docker run -d --name objectrecognition -v /home/kuba/motioneye/var:/data/ -v /home/kuba/newhome/objectrecognition/objectrecognition:/model/ objectrecognition:latest
+docker run -d --name objectrecognition2 -v /Users/kuba/motioneye/var:/data/ -v /Users/kuba/Documents/home/docker-classifier:/model/ objectrecognition2:latest

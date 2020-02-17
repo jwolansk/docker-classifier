@@ -77,7 +77,7 @@ class Watcher():
         self.observer.start()
         print("handler started")
 
-        client = mqtt.Client("docker-classifier-2.0")
+        client = mqtt.Client("docker-classifier-2.0-mbp")
         client.connect("192.168.1.253", 1883, 60)
         client.loop_start()
 
