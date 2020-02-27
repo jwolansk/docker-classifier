@@ -25,5 +25,6 @@ RUN pip3 install pillow
 RUN pip3 install h5py
 RUN pip3 install paho-mqtt
 RUN pip3 install watchdog
+RUN pip3 install guppy3
 
 CMD "/model/run.sh"

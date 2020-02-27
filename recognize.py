@@ -7,6 +7,7 @@ from subprocess import call
 from datetime import datetime
 import paho.mqtt.client as mqtt
 import sys
+import gc
 
 import time
 import queue
@@ -20,7 +21,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 CAMERA_NAME = "gate"
 class Watcher():
-
+    img = Image.new('RGB', (1, 1))
     def __init__(self):
         self.observer = Observer()
 
@@ -141,6 +142,13 @@ class Watcher():
 
                     print(logString)
 
+                    from guppy import hpy
+
+                    h = hpy()
+
+                    print(h.heap())
+
+                    gc.collect()
         except KeyboardInterrupt:
             print("stop")
         self.observer.join()
@@ -167,6 +175,7 @@ class Handler(PatternMatchingEventHandler):
 
 if __name__ == '__main__':
 
+    print(gc.isenabled())
     w = Watcher()
     w.run("/data/" + CAMERA_NAME + "/")
 
