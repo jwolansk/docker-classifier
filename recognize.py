@@ -9,6 +9,8 @@ import paho.mqtt.client as mqtt
 import sys
 import gc
 
+import json
+import requests
 import time
 import queue
 from watchdog.observers import Observer
@@ -65,11 +67,6 @@ class Watcher():
         # load model
         folder = "/data/" + CAMERA_NAME + "/"
 
-        movement = load_model('/model/model.h5')
-        objects = load_model('model/model_objects.h5')
-        # summarize model.
-        objects.summary()
-
         classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
         movement_classes = ['yes', 'no']
 
@@ -103,52 +100,68 @@ class Watcher():
                         continue
 
                     start_time = time.time()
-                    # result = model.predict_classes(data)[0]
-                    probs = movement.predict(data)
+                    try:
+                        start_time = time.time()
+                        json_response = requests.post('http://192.168.1.64:8501/v1/models/movement:predict',
+                                                      data=servingData, headers=headers)
+                        movement_predictions = json.loads(json_response.text)['predictions']
+                        movement_result = np.argmax(movement_predictions[0])
+                        logString = logString + "/%.2f ---" % (time.time() - start_time) + " " + classes[
+                            result] + ' ' + "%.2f" % movement_predictions[0][result]
 
-                    movement_result = probs.argmax(axis=-1)[0]
+                        logString = path + ' ' + movement_classes[movement_result] + ' ' + "%.2f %.2f" % (
+                        movement_predictions[0][movement_predictions.argmax(axis=-1)[0]], time.time() - start_time)
+                        highProbMoving = False
 
-                    logString = path + ' ' + movement_classes[movement_result] + ' ' + "%.2f %.2f" % (probs[0][probs.argmax(axis=-1)[0]], time.time() - start_time)
-                    highProbMoving = False
+                        if movement_predictions[0][movement_result] > 0.75:
+                            if movement_classes[movement_result] == 'yes':
+                                # highFile = path.replace("/gate/", "/gatehigh/")
+                                # if os.path.exists(highFile):
+                                #     subprocess.call("cp '" + highFile + "' /data/gate/lastmove.jpg", shell=True)
+                                # else:
+                                subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
 
-                    if probs[0][movement_result] > 0.75:
-                        if movement_classes[movement_result] == 'yes':
-                            # highFile = path.replace("/gate/", "/gatehigh/")
-                            # if os.path.exists(highFile):
-                            #     subprocess.call("cp '" + highFile + "' /data/gate/lastmove.jpg", shell=True)
-                            # else:
-                            subprocess.call("cp '" + path + "' /data/gate/lastmove.jpg", shell=True)
+                                client.publish("gate/object", movement_classes[movement_result])
 
-                            client.publish("gate/object", movement_classes[movement_result])
+                                servingData = json.dumps(
+                                    {"signature_name": "serving_default", "instances": data[0:1].tolist()})
+                                # print(servingData)
+                                headers = {"content-type": "application/json"}
+                                try:
+                                    start_time = time.time()
+                                    json_response = requests.post(
+                                        'http://192.168.1.64:8501/v1/models/model_objects:predict',
+                                        data=servingData, headers=headers)
+                                    predictions = json.loads(json_response.text)['predictions']
+                                    result = np.argmax(predictions[0])
+                                    logString = logString + "/%.2f ---" % (time.time() - start_time) + " " + classes[
+                                        result] + ' ' + "%.2f" % predictions[0][result]
+                                    if predictions[0][result] > 0.45:
+                                        client.publish("gate/object", classes[result])
+                                    classpath = "/data/" + CAMERA_NAME + "/" + classes[result]
+                                    if not os.path.exists(classpath):
+                                        subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
+                                    subprocess.call("mv '" + path + "' " + classpath, shell=True)
+                                    highProbMoving = True
 
-                            probs = objects.predict(data)
-                            logString = logString + "/%.2f ---" % (time.time() - start_time) + " "
+                                except Exception as inst:
+                                    print(type(inst))  # the exception instance
+                                    print(inst.args)  # arguments stored in .args
+                                    print(inst)
 
-                            result = probs.argmax(axis=-1)[0]
+                        yesnopath = "/data/" + CAMERA_NAME + "/" + movement_classes[movement_result]
+                        if not os.path.exists(yesnopath):
+                            subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
+                        if not highProbMoving:
+                            subprocess.call("mv '" + path + "' " + yesnopath, shell=True)
 
-                            logString = logString + ' ' + classes[result] + ' ' + "%.2f" % probs[0][result]
-                            if probs[0][result] > 0.45:
-                                client.publish("gate/object", classes[result])
-                            classpath = "/data/" + CAMERA_NAME + "/" + classes[result]
-                            if not os.path.exists(classpath):
-                                subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
-                            subprocess.call("mv '" + path + "' " + classpath, shell=True)
-                            highProbMoving = True
-                    yesnopath = "/data/" + CAMERA_NAME + "/" + movement_classes[movement_result]
-                    if not os.path.exists(yesnopath):
-                        subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
-                    if not highProbMoving:
-                        subprocess.call("mv '" + path + "' " + yesnopath, shell=True)
+                        print(logString)
+                    except Exception as inst:
+                        print(type(inst))  # the exception instance
+                        print(inst.args)  # arguments stored in .args
+                        print(inst)
 
-                    print(logString)
 
-                    from guppy import hpy
-
-                    h = hpy()
-
-                    print(h.heap())
-
-                    gc.collect()
         except KeyboardInterrupt:
             print("stop")
         self.observer.join()

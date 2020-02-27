@@ -1,0 +1,12 @@
+model_config_list: {
+  config: {
+    name: "movement",
+    base_path: "/models/movement",
+    model_platform: "tensorflow"
+  },
+  config: {
+    name: "objects",
+    base_path: "/models/objects",
+    model_platform: "tensorflow"
+  }
+}
