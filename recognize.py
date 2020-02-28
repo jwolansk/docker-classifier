@@ -1,10 +1,6 @@
 import numpy as np
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from PIL import Image
 import subprocess
 import paho.mqtt.client as mqtt
-import gc
-
 import logging
 import json
 import requests
@@ -16,6 +12,8 @@ from watchdog.events import PatternMatchingEventHandler
 import os.path
 
 from PIL import ImageFile
+from PIL import Image
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 hostname = "192.168.1.200"
@@ -49,7 +47,7 @@ class Watcher():
             for index,filename in enumerate(paths):
 
                 try:
-                    img = load_img(filename)  # this is a PIL image
+                    img = Image.open(filename)  # this is a PIL image
                 except:
                     return None
                 # img = img.resize((640, 480))
@@ -63,7 +61,7 @@ class Watcher():
                 img = img.crop((left, top, right, bottom))
 
                 # Convert to Numpy Array
-                x = img_to_array(img)
+                x = np.array(img)
                 x = x.reshape((image_height, image_width, 3))
                 # Normalize
                 x = x / 256.0
@@ -217,8 +215,6 @@ class Handler(PatternMatchingEventHandler):
 
 if __name__ == '__main__':
 
-
-    logger.info("gc enabled" if gc.isenabled() else "gc disabled")
     w = Watcher()
     w.run("/data/" + CAMERA_NAME + "/")
 
