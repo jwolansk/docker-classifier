@@ -97,6 +97,10 @@ class Watcher():
             client.loop_start()
 
             while True:
+                if q.empty() and highQ.empty():
+                    time.sleep(0.5)
+                    continue
+
                 if not q.empty():
                     time.sleep(0.1)
                     pathSet = set([])
