@@ -1,0 +1,28 @@
+version: "3"
+services:
+
+  tensorflow-serving:
+    image: serving_no_avx
+    ports:
+      - "8501:8501"
+    command:
+      - /usr/bin/tensorflow_model_server
+      - --model_config_file=/models/models.config
+      - --rest_api_port=8501
+    volumes:
+        - '/home/kuba/serving/:/models'
+    deploy:
+      replicas: 2
+
+  viz:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8088:8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+
