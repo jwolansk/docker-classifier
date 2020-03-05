@@ -37,7 +37,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp13")
+    client = mqtt.Client("docker-classifier-2.0")
 
     pathsChecked = {}
 
@@ -79,6 +79,7 @@ class Watcher():
         while True:
 
             logger.debug("## path task sleep")
+            await asyncio.sleep(0.5)
 
             path = await self.q.async_q.get()
             logger.debug("#### got q path")
@@ -184,11 +185,11 @@ class Watcher():
 
     async def pathCleaner(self):
         while True:
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
             newPaths = {}
             for path, timestamp in self.pathsChecked.items():
                 logger.debug("checking: " + path)
-                if timestamp + timedelta(seconds=10) < datetime.now():
+                if timestamp + timedelta(seconds=20) < datetime.now():
                     newPaths[path] = timestamp
                 else:
                     logger.debug("cleaned: " + path)
