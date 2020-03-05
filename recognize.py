@@ -243,7 +243,7 @@ class Handler(PatternMatchingEventHandler):
             return None
 
         # Take any action here when a file is first created.
-        logger.info(event)
+        logger.debug(event)
         path = "%s" % event.src_path
         self.q.put(path)
 
