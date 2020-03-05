@@ -37,7 +37,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
+    client = mqtt.Client("docker-classifier-2.0-mbp13")
 
     pathsChecked = {}
 
@@ -79,7 +79,7 @@ class Watcher():
         while True:
 
             logger.debug("## path task sleep")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
             path = await self.q.async_q.get()
             logger.debug("#### got q path")
@@ -181,7 +181,6 @@ class Watcher():
                 logger.error(type(inst))  # the exception instance
                 logger.error(inst.args)  # arguments stored in .args
                 logger.error(inst)
-            # await asyncio.sleep(0.1)
 
     async def pathCleaner(self):
         while True:
