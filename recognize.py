@@ -170,8 +170,8 @@ class Watcher():
                         logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
                             result] + ' (' + "%.2f" % predictions[index][result] + ")"
                         logger.info(logString)
-                        # if predictions[index][result] > 0.45:
-                            # self.client.publish("gate/object", self.classes[result])
+                        if predictions[index][result] > 0.45:
+                            self.client.publish("gate/object", self.classes[result])
                         classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
                         if not os.path.exists(classpath):
                             subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
