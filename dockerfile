@@ -19,5 +19,6 @@ RUN pip3 install watchdog
 RUN pip3 install requests
 RUN pip3 install aiohttp
 RUN pip3 install aiojobs
+RUN pip3 install janus
 
 CMD "/model/run.sh"

@@ -4,12 +4,13 @@ import paho.mqtt.client as mqtt
 import logging
 import json
 import time
-import queue
+from datetime import datetime
+from datetime import timedelta
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import asyncio
 import aiohttp
-import requests
+import janus
 
 import os.path
 
@@ -33,12 +34,12 @@ channels = 3
 
 class Watcher():
     img = Image.new('RGB', (1, 1))
-    pathQueue = queue.Queue()
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp")
+    client = mqtt.Client("docker-classifier-2.0-mbp13")
 
+    pathsChecked = {}
 
     def __init__(self):
         self.observer = Observer()
@@ -78,18 +79,21 @@ class Watcher():
         while True:
 
             logger.debug("## path task sleep")
-            path = await self.q.get()
+
+            path = await self.q.async_q.get()
             logger.debug("#### got q path")
             paths = [path]
             data = self.load_data(paths)
             if data is None:
                 logger.debug("#### none data")
                 continue
-            if not data[0] is None:
-                logger.debug(data[0])
-            else:
+            if data[0] is None:
                 logger.debug("#### none first data")
                 continue
+
+            if path in self.pathsChecked:
+                continue
+            self.pathsChecked[path] = datetime.now()
 
             logger.debug("## checking " + str(1) + " paths")
             try:
@@ -178,31 +182,25 @@ class Watcher():
                 logger.error(inst)
             # await asyncio.sleep(0.1)
 
+    async def pathCleaner(self):
+        while True:
+            await asyncio.sleep(5)
+            newPaths = {}
+            for path, timestamp in self.pathsChecked.items():
+                logger.debug("checking: " + path)
+                if timestamp + timedelta(seconds=10) < datetime.now():
+                    newPaths[path] = timestamp
+                else:
+                    logger.debug("cleaned: " + path)
 
-
-    async def producePaths(self):
-        logger.info("## creating new path producer task")
-        try:
-            self.client.loop_start()
-
-            while True:
-
-                logger.debug("sleeping")
-                path = self.pathQueue.get()
-                logger.debug(path)
-                await self.q.put(path)
-                await asyncio.sleep(0.1)
-
-        except KeyboardInterrupt:
-            logger.info("stop")
-        self.observer.join()
+            self.pathsChecked = newPaths
 
     async def run(self, path):
 
-        self.q = asyncio.Queue()
+        self.q = janus.Queue()
         self.highQ = asyncio.Queue()
 
-        event_handler = Handler(q=self.pathQueue, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
+        event_handler = Handler(q=self.q.sync_q, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
 
         logger.info("--- started")
 
@@ -226,7 +224,7 @@ class Watcher():
         async with aiohttp.ClientSession() as session:
             self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(5)] +\
                          [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(4)] +\
-                         [asyncio.create_task(self.producePaths())]
+                         [asyncio.create_task(self.pathCleaner())]
 
             await asyncio.gather(*self.tasks)
 
@@ -240,11 +238,12 @@ class Handler(PatternMatchingEventHandler):
             ignore_directories=True
         )
 
-    def on_created(self, event):
+    def on_modified(self, event):
         if event.is_directory:
             return None
 
         # Take any action here when a file is first created.
+        logger.info(event)
         path = "%s" % event.src_path
         self.q.put(path)
 
@@ -255,5 +254,5 @@ async def main():
     await w.run("/data/" + CAMERA_NAME + "/")
 
 
-asyncio.run(main())
+asyncio.run(main(), debug=False)
 
