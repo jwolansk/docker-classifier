@@ -37,7 +37,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp13")
+    client = mqtt.Client("docker-classifier-2.0")
 
     pathsChecked = {}
 
