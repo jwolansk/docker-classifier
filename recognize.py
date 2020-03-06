@@ -238,7 +238,7 @@ class Handler(PatternMatchingEventHandler):
             ignore_directories=True
         )
 
-    def on_modified(self, event):
+    def on_created(self, event):
         if event.is_directory:
             return None
 
