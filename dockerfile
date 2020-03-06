@@ -13,12 +13,9 @@ RUN pip3 install --upgrade pip
 RUN pip3 install numpy scipy
 RUN pip3 install scikit-learn
 RUN pip3 install pillow
-RUN pip3 install h5py
 RUN pip3 install paho-mqtt
 RUN pip3 install watchdog
-RUN pip3 install requests
 RUN pip3 install aiohttp
-RUN pip3 install aiojobs
 RUN pip3 install janus
 
 CMD "/model/run.sh"

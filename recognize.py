@@ -1,18 +1,14 @@
 import numpy as np
-import subprocess
-import paho.mqtt.client as mqtt
 import logging
 import json
 import time
 from datetime import datetime
 from datetime import timedelta
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
 import asyncio
 import aiohttp
 import janus
-
-import os.path
+from os import listdir
+from os.path import isfile, join
 
 from PIL import ImageFile
 from PIL import Image
@@ -34,15 +30,16 @@ channels = 3
 
 class Watcher():
     img = Image.new('RGB', (1, 1))
-    folder = "/data/" + CAMERA_NAME + "/"
+    folder = "/Users/kuba/motioneye/var/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
 
-    pathsChecked = {}
+    movetimes = []
+    classtimes = []
 
-    def __init__(self):
-        self.observer = Observer()
+    producerFinished = False
+    moveFinished = False
+    pathCount = 0
 
     # load train and test dataset
     async def load_data(self, paths):
@@ -74,49 +71,35 @@ class Watcher():
 
         return imagedata
 
-    async def handleFailedPaths(self, session):
-        logger.info("## creating new failed path task")
-        while True:
+    async def pathProducer(self, session):
+        logger.info("## creating new path producer task")
+        await asyncio.sleep(0.5)
+        paths = [f for f in listdir(self.folder) if isfile(join(self.folder, f))]
 
-            logger.debug("## failed path task sleep")
-            await asyncio.sleep(0.1)
+        for path in paths:
+            await self.q.async_q.put(self.folder + path)
 
-            path = await self.failedQ.get()
-            logger.debug("#### got failed q path")
-
-            await asyncio.sleep(0.1)
-            if os.path.exists(path):
-                logger.debug("path exists: " + path)
-                await self.q.async_q.put(path)
-            else:
-                logger.debug("path does not exist anymore: " + path)
-
+        logger.info("producer finished with %s paths" % len(paths))
+        self.pathCount = len(paths)
+        self.producerFinished = True
 
     async def handleNewPaths(self, session):
         logger.info("## creating new path task")
         while True:
 
-            logger.debug("## path task sleep")
-            await asyncio.sleep(0.1)
+            if self.producerFinished and self.pathCount == 0:
+                self.moveFinished = True
+                logger.info("move finished")
+                return
 
             path = await self.q.async_q.get()
             logger.debug("#### got q path")
             paths = [path]
-            if path in self.pathsChecked:
-                continue
+
             data = await self.load_data(paths)
             if data is None:
                 logger.debug("#### none data: " + path)
-                await self.failedQ.put(path)
-                await asyncio.sleep(0.1)
                 continue
-            if data[0] is None:
-                logger.debug("#### none first data")
-                await self.failedQ.put(path)
-                await asyncio.sleep(0.1)
-                continue
-
-            self.pathsChecked[path] = datetime.now()
 
             logger.debug("## checking " + str(1) + " paths")
             try:
@@ -130,7 +113,7 @@ class Watcher():
                     json_response = await response.json()
 
                     predictions = json_response['predictions']
-
+                    self.movetimes.append(time.time() - start_time)
                     logger.debug("####### predictions")
                     logger.debug(predictions)
                     for index, movement_predictions in enumerate(predictions):
@@ -141,29 +124,28 @@ class Watcher():
                         if movement_predictions[movement_result] > 0.75:
                             if self.movement_classes[movement_result] == 'yes':
                                 element = (paths[index], logString, data[index])
-                                await self.highQ.put(element)
+                                await self.highQ.async_q.put(element)
 
-                                subprocess.call("cp '" + paths[index] + "' /data/gate/lastmove.jpg", shell=True)
-                                self.client.publish("gate/object", self.movement_classes[movement_result])
                                 continue
-                        yesnopath = "/data/" + CAMERA_NAME + "/" + self.movement_classes[movement_result]
-                        if not os.path.exists(yesnopath):
-                            subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
-
                         logger.info(logString)
-                        subprocess.call("mv '" + paths[index] + "' " + yesnopath, shell=True)
 
             except Exception as inst:
                 logger.error(type(inst))  # the exception instance
                 logger.error(inst.args)  # arguments stored in .args
                 logger.error(inst)
+            self.pathCount -= 1
+            logger.info("%s paths left" % self.pathCount)
+            if self.pathCount < 600:
+                self.moveFinished = True
+                logger.info("move finished")
+                return
 
 
     async def handleMovementPaths(self, session):
         logger.info("## creating new move class task")
         while True:
             elements = []
-            path = await self.highQ.get()
+            path = await self.highQ.async_q.get()
             elements.append(path)
             logger.debug("#### got highq path")
 
@@ -185,6 +167,7 @@ class Watcher():
 
                     predictions = json_response['predictions']
 
+                    self.classtimes.append(time.time() - start_time)
                     logger.debug("####### predictions")
                     logger.debug(predictions)
                     for index, movement_predictions in enumerate(predictions):
@@ -192,85 +175,48 @@ class Watcher():
                         logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
                             result] + ' (' + "%.2f" % predictions[index][result] + ")"
                         logger.info(logString)
-                        # if predictions[index][result] > 0.45:
-                        #     self.client.publish("gate/object", self.classes[result])
-                        classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
-                        if not os.path.exists(classpath):
-                            subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
-                        subprocess.call("mv '" + elements[index][0] + "' " + classpath, shell=True)
 
             except Exception as inst:
                 logger.error(type(inst))  # the exception instance
                 logger.error(inst.args)  # arguments stored in .args
                 logger.error(inst)
 
-    async def pathCleaner(self):
-        while True:
-            await asyncio.sleep(10)
-            newPaths = {}
-            for path, timestamp in self.pathsChecked.items():
-                logger.debug("checking: " + path)
-                if timestamp + timedelta(seconds=20) < datetime.now():
-                    newPaths[path] = timestamp
-                else:
-                    logger.debug("cleaned: " + path)
+            if self.moveFinished and self.highQ.sync_q.empty():
+                logger.info("high finished")
+                return
 
-            self.pathsChecked = newPaths
 
     async def run(self, path):
 
-        self.q = janus.Queue()
-        self.highQ = asyncio.Queue()
-        self.failedQ = asyncio.Queue()
+        start_time = time.time()
 
-        event_handler = Handler(q=self.q.sync_q, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
+        self.q = janus.Queue()
+        self.highQ = janus.Queue()
 
         logger.info("--- started")
 
-        self.observer.schedule(event_handler, path, recursive=True)
-        self.observer.start()
-        logger.info("handler started")
-
-        self.client.connect("192.168.1.253", 1883, 60)
-        self.client.loop_start()
-
-        def on_disconnect(client, userdata, rc):
-            if rc != 0:
-                logger.info("Unexpected MQTT disconnection. Will auto-reconnect")
-
-        def on_connect(client, userdata, rc):
-            logger.info("MQTT Client Connected")
-
-        self.client.on_disconnect = on_disconnect
-        self.client.on_connect = on_connect
-
         async with aiohttp.ClientSession() as session:
-            self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(5)] +\
-                         [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(4)] +\
-                         [asyncio.create_task(self.handleFailedPaths(session))] +\
-                         [asyncio.create_task(self.pathCleaner())]
+            self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(1)] +\
+                         [asyncio.create_task(self.pathProducer(session))]
 
             await asyncio.gather(*self.tasks)
 
+            self.tasks = [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(1)]
+            await asyncio.gather(*self.tasks)
 
-class Handler(PatternMatchingEventHandler):
+            avg = 0.0
+            for secs in self.movetimes:
+                avg += secs
+            avg = avg / len(self.movetimes)
+            logger.info("move avg: %.2fs" % (avg))
 
-    def __init__(self, q, ignore_patterns):
-        self.q = q
-        super(Handler, self).__init__(
-            ignore_patterns=ignore_patterns,
-            ignore_directories=True
-        )
+            avg = 0.0
+            for secs in self.classtimes:
+                avg += secs
+            avg = avg / len(self.classtimes)
+            logger.info("class avg: %.2fs" % (avg))
 
-    def on_created(self, event):
-        if event.is_directory:
-            return None
-
-        # Take any action here when a file is first created.
-        logger.debug(event)
-        path = "%s" % event.src_path
-        self.q.put(path)
-
+            logger.info("avg total time: %.2fs" % ((time.time() - start_time) / len(self.movetimes)))
 
 async def main():
 
