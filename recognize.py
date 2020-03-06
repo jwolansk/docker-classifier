@@ -37,7 +37,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
+    client = mqtt.Client("docker-classifier-2.0-mbp")
 
     pathsChecked = {}
 
@@ -45,7 +45,7 @@ class Watcher():
         self.observer = Observer()
 
     # load train and test dataset
-    def load_data(self, paths):
+    async def load_data(self, paths):
 
         imagedata = np.ndarray(shape=(len(paths), image_height, image_width, channels),
                                dtype=np.float32)
@@ -74,6 +74,24 @@ class Watcher():
 
         return imagedata
 
+    async def handleFailedPaths(self, session):
+        logger.info("## creating new failed path task")
+        while True:
+
+            logger.debug("## failed path task sleep")
+            await asyncio.sleep(0.1)
+
+            path = await self.failedQ.get()
+            logger.debug("#### got failed q path")
+
+            await asyncio.sleep(0.1)
+            if os.path.exists(path):
+                logger.debug("path exists: " + path)
+                await self.q.async_q.put(path)
+            else:
+                logger.debug("path does not exist anymore: " + path)
+
+
     async def handleNewPaths(self, session):
         logger.info("## creating new path task")
         while True:
@@ -84,16 +102,20 @@ class Watcher():
             path = await self.q.async_q.get()
             logger.debug("#### got q path")
             paths = [path]
-            data = self.load_data(paths)
+            if path in self.pathsChecked:
+                continue
+            data = await self.load_data(paths)
             if data is None:
-                logger.debug("#### none data")
+                logger.debug("#### none data: " + path)
+                await self.failedQ.put(path)
+                await asyncio.sleep(0.1)
                 continue
             if data[0] is None:
                 logger.debug("#### none first data")
+                await self.failedQ.put(path)
+                await asyncio.sleep(0.1)
                 continue
 
-            if path in self.pathsChecked:
-                continue
             self.pathsChecked[path] = datetime.now()
 
             logger.debug("## checking " + str(1) + " paths")
@@ -170,8 +192,8 @@ class Watcher():
                         logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
                             result] + ' (' + "%.2f" % predictions[index][result] + ")"
                         logger.info(logString)
-                        if predictions[index][result] > 0.45:
-                            self.client.publish("gate/object", self.classes[result])
+                        # if predictions[index][result] > 0.45:
+                        #     self.client.publish("gate/object", self.classes[result])
                         classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
                         if not os.path.exists(classpath):
                             subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
@@ -199,6 +221,7 @@ class Watcher():
 
         self.q = janus.Queue()
         self.highQ = asyncio.Queue()
+        self.failedQ = asyncio.Queue()
 
         event_handler = Handler(q=self.q.sync_q, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
 
@@ -224,6 +247,7 @@ class Watcher():
         async with aiohttp.ClientSession() as session:
             self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(5)] +\
                          [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(4)] +\
+                         [asyncio.create_task(self.handleFailedPaths(session))] +\
                          [asyncio.create_task(self.pathCleaner())]
 
             await asyncio.gather(*self.tasks)
@@ -243,7 +267,7 @@ class Handler(PatternMatchingEventHandler):
             return None
 
         # Take any action here when a file is first created.
-        logger.debug(event)
+        logger.info(event)
         path = "%s" % event.src_path
         self.q.put(path)
 
