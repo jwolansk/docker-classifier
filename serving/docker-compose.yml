@@ -2,7 +2,7 @@ version: "3"
 services:
 
   tensorflow-serving:
-    image: serving_no_avx
+    image: serving
     ports:
       - "8501:8501"
     command:
@@ -12,4 +12,7 @@ services:
     volumes:
         - '/Users/kuba/serving/:/models'
     deploy:
-      replicas: 3
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.labels.serving == true]

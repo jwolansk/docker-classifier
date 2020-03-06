@@ -12,4 +12,7 @@ services:
     volumes:
         - '/Users/kuba/serving/:/models'
     deploy:
-      replicas: 3
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.labels.serving == true]
