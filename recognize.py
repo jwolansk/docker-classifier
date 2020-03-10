@@ -27,8 +27,11 @@ logging.basicConfig(level=logging.INFO)
 handle = "obj-reco"
 logger = logging.getLogger(handle)
 
+ori_image_width = 53
+ori_image_height = 40
+
 image_width = 53
-image_height = 40
+image_height = 27
 channels = 3
 
 
@@ -37,7 +40,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
+    client = mqtt.Client("docker-classifier-2.0-mbp")
 
     pathsChecked = {}
 
@@ -55,15 +58,9 @@ class Watcher():
                 img = Image.open(filename)  # this is a PIL image
             except:
                 return None
-            # img = img.resize((640, 480))
-            ratio = img.size[0] / img.size[1]
-            img = img.resize((int(ratio * image_height), image_height))
-            left = int((ratio * image_height - image_width) / 2)
-            top = 0
-            right = left + image_width
-            bottom = image_height
 
-            img = img.crop((left, top, right, bottom))
+            img = img.resize((ori_image_width, ori_image_height))
+            img = img.crop((0, ori_image_height - image_height, ori_image_width, ori_image_height))
 
             # Convert to Numpy Array
             x = np.array(img)
