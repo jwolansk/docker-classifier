@@ -135,7 +135,7 @@ class Watcher():
                 logger.error(inst)
             self.pathCount -= 1
             logger.info("%s paths left" % self.pathCount)
-            if self.pathCount < 600:
+            if self.pathCount <= 1:
                 self.moveFinished = True
                 logger.info("move finished")
                 return
