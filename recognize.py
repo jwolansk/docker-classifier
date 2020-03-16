@@ -40,9 +40,10 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp")
+    client = mqtt.Client("docker-classifier-2.0")
 
     pathsChecked = {}
+    background_avg = np.load("/model/background_avg.npy")
 
     def __init__(self):
         self.observer = Observer()
@@ -67,6 +68,7 @@ class Watcher():
             x = x.reshape((image_height, image_width, 3))
             # Normalize
             x = x / 256.0
+            x = np.subtract(x, self.background_avg)
             imagedata[index] = x
 
         return imagedata
