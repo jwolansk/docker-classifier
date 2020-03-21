@@ -68,7 +68,7 @@ class Watcher():
             x = x.reshape((image_height, image_width, 3))
             # Normalize
             x = x / 256.0
-            x = np.subtract(x, self.background_avg)
+            # x = np.subtract(x, self.background_avg)
             imagedata[index] = x
 
         return imagedata
