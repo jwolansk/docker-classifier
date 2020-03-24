@@ -245,8 +245,8 @@ class Watcher():
         self.client.on_connect = on_connect
 
         async with aiohttp.ClientSession() as session:
-            self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(5)] +\
-                         [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(4)] +\
+            self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(1)] +\
+                         [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(1)] +\
                          [asyncio.create_task(self.handleFailedPaths(session))] +\
                          [asyncio.create_task(self.pathCleaner())]
 
