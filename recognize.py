@@ -192,7 +192,7 @@ class Watcher():
                         logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
                             result] + ' (' + "%.2f" % predictions[index][result] + ")"
                         logger.info(logString)
-                        if predictions[index][result] > 0.45:
+                        if predictions[index][result] > 0.55:
                             self.client.publish("gate/object", self.classes[result])
                         classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
                         if not os.path.exists(classpath):
