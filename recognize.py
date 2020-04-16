@@ -41,7 +41,7 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp")
+    client = mqtt.Client("docker-classifier-2.0")
 
     pathsChecked = {}
     background_avg = np.load("/model/background_avg.npy")
@@ -53,7 +53,7 @@ class Watcher():
     async def check_hosts(self):
         logger.info("## creating new find hostname task")
         while True:
-            logger.debug("tick")
+            logger.info("tick")
             time.sleep(5)
 
             hostnames = ["192.168.1.64", "192.168.1.145", "192.168.1.200"]
@@ -72,13 +72,13 @@ class Watcher():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(delay)
         try:
-            logger.debug("checking " + host + " " + str(port))
+            logger.info("checking " + host + " " + str(port))
             s.connect((host, int(port)))
-            logger.debug("reachable " + host)
+            logger.info("reachable " + host)
             s.shutdown(socket.SHUT_RDWR)
             return True
         except:
-            logger.debug("closed " + host)
+            logger.info("closed " + host)
             return False
         finally:
             s.close()
