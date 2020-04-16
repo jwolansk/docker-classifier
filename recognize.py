@@ -3,7 +3,6 @@ import subprocess
 import paho.mqtt.client as mqtt
 import logging
 import json
-import time
 from datetime import datetime
 from datetime import timedelta
 from watchdog.observers import Observer
@@ -11,6 +10,8 @@ from watchdog.events import PatternMatchingEventHandler
 import asyncio
 import aiohttp
 import janus
+import socket
+import time
 
 import os.path
 
@@ -40,13 +41,48 @@ class Watcher():
     folder = "/data/" + CAMERA_NAME + "/"
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
+    client = mqtt.Client("docker-classifier-2.0-mbp")
 
     pathsChecked = {}
     background_avg = np.load("/model/background_avg.npy")
 
     def __init__(self):
         self.observer = Observer()
+
+
+    async def check_hosts(self):
+        logger.info("## creating new find hostname task")
+        while True:
+            logger.debug("tick")
+            time.sleep(5)
+
+            hostnames = ["192.168.1.64", "192.168.1.145", "192.168.1.200"]
+            for host in hostnames:
+                if self.wait_host_port(host, 8501):
+                    global hostname
+                    hostname = host
+                    if not hostname == host:
+                        self.last_hostname_found = datetime.now()
+                        logger.info("### using " + hostname)
+                    break
+
+
+    def wait_host_port(self, host, port, delay=2):
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(delay)
+        try:
+            logger.debug("checking " + host + " " + str(port))
+            s.connect((host, int(port)))
+            logger.debug("reachable " + host)
+            s.shutdown(socket.SHUT_RDWR)
+            return True
+        except:
+            logger.debug("closed " + host)
+            return False
+        finally:
+            s.close()
+
 
     # load train and test dataset
     async def load_data(self, paths):
@@ -248,7 +284,8 @@ class Watcher():
             self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(10)] +\
                          [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(6)] +\
                          [asyncio.create_task(self.handleFailedPaths(session))] +\
-                         [asyncio.create_task(self.pathCleaner())]
+                         [asyncio.create_task(self.pathCleaner())] +\
+                         [asyncio.create_task(self.check_hosts())]
 
             await asyncio.gather(*self.tasks)
 
