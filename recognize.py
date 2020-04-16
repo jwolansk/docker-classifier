@@ -53,7 +53,7 @@ class Watcher():
     async def check_hosts(self):
         logger.info("## creating new find hostname task")
         while True:
-            logger.info("tick")
+            logger.debug("tick")
             await asyncio.sleep(5)
 
             hostnames = ["192.168.1.64", "192.168.1.145", "192.168.1.200"]
@@ -71,13 +71,13 @@ class Watcher():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(delay)
         try:
-            logger.info("checking " + host + " " + str(port))
+            logger.debug("checking " + host + " " + str(port))
             s.connect((host, int(port)))
-            logger.info("reachable " + host)
+            logger.debug("reachable " + host)
             s.shutdown(socket.SHUT_RDWR)
             return True
         except:
-            logger.info("closed " + host)
+            logger.debug("closed " + host)
             return False
         finally:
             s.close()
@@ -187,6 +187,10 @@ class Watcher():
                         logger.info(logString)
                         await asyncio.sleep(0.5)
                         subprocess.call("mv '" + paths[index] + "' " + yesnopath, shell=True)
+
+            except aiohttp.client_exceptions.ClientConnectorError as exc:
+                logger.error(type(inst))
+                await self.q.async_q.put(path)
 
             except Exception as inst:
                 logger.error(type(inst))  # the exception instance
