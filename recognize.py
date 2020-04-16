@@ -54,15 +54,14 @@ class Watcher():
         logger.info("## creating new find hostname task")
         while True:
             logger.info("tick")
-            time.sleep(5)
+            await asyncio.sleep(5)
 
             hostnames = ["192.168.1.64", "192.168.1.145", "192.168.1.200"]
             for host in hostnames:
                 if self.wait_host_port(host, 8501):
                     global hostname
-                    hostname = host
                     if not hostname == host:
-                        self.last_hostname_found = datetime.now()
+                        hostname = host
                         logger.info("### using " + hostname)
                     break
 
