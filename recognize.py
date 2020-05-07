@@ -43,7 +43,7 @@ class Watcher():
 
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0-mbp")
+    client = mqtt.Client("docker-classifier-2.0")
 
     pathsChecked = {}
 
@@ -52,7 +52,7 @@ class Watcher():
         self.observer = Observer()
 
     def load_models(self):
-        path = ""
+        path = "/model/"
         self.moveInterpreter = tf.lite.Interpreter(model_path=path + "movement.tflite")
         self.moveInterpreter.allocate_tensors()
         self.objectsInterpreter = tf.lite.Interpreter(model_path=path + "objects.tflite")
@@ -172,7 +172,7 @@ class Watcher():
             movement_predictions = list(self.moveInterpreter.get_tensor(output_details[0]['index'])[0])
 
             logger.debug("####### predictions")
-            logger.info(movement_predictions)
+            logger.debug(movement_predictions)
             index = 0
             movement_result = np.argmax(movement_predictions)
             logString = paths[0] + " %.2f" % (time.time() - start_time) + "s " + self.movement_classes[

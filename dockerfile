@@ -14,7 +14,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install --verbose https://github.com/inoryy/tensorflow-optimized-wheels/releases/download/v2.1.0/tensorflow-2.1.0-cp37-cp37m-linux_x86_64.whl
 
 # uncomment the following line if you have AVX support
-#RUN pip3 install tensorflow==2.0
+#RUN pip3 install tensorflow
 
 RUN pip3 install numpy scipy
 RUN pip3 install scikit-learn
