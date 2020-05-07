@@ -175,7 +175,7 @@ class Watcher():
             logger.debug(movement_predictions)
             index = 0
             movement_result = np.argmax(movement_predictions)
-            logString = paths[0] + " %.2f" % (time.time() - start_time) + "s " + self.movement_classes[
+            logString = paths[0] + " %.3f" % (time.time() - start_time) + "s " + self.movement_classes[
                 movement_result] + ' (' + "%.2f" % movement_predictions[movement_result] + ")"
 
             if movement_predictions[movement_result] > 0.75:
@@ -222,7 +222,7 @@ class Watcher():
             logger.debug(movement_predictions)
             index = 0
             result = np.argmax(movement_predictions)
-            logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
+            logString = elements[index][1] + " - %.3fs ---" % (time.time() - start_time) + " " + self.classes[
                 result] + ' (' + "%.2f" % movement_predictions[result] + ")"
             logger.info(logString)
             if movement_predictions[result] > 0.55:
