@@ -58,39 +58,6 @@ class Watcher():
         self.objectsInterpreter = tf.lite.Interpreter(model_path=path + "objects.tflite")
         self.objectsInterpreter.allocate_tensors()
 
-    async def check_hosts(self):
-        logger.info("## creating new find hostname task")
-        while True:
-            logger.debug("tick")
-            await asyncio.sleep(5)
-
-            hostnames = ["192.168.1.64", "192.168.1.145", "192.168.1.200"]
-            for host in hostnames:
-                if self.wait_host_port(host, 8501):
-                    global hostname
-                    if not hostname == host:
-                        hostname = host
-                        logger.info("### using " + hostname)
-                    break
-
-
-    def wait_host_port(self, host, port, delay=2):
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(delay)
-        try:
-            logger.debug("checking " + host + " " + str(port))
-            s.connect((host, int(port)))
-            logger.debug("reachable " + host)
-            s.shutdown(socket.SHUT_RDWR)
-            return True
-        except:
-            logger.debug("closed " + host)
-            return False
-        finally:
-            s.close()
-
-
     # load train and test dataset
     async def load_data(self, paths):
 
@@ -175,7 +142,7 @@ class Watcher():
             logger.debug(movement_predictions)
             index = 0
             movement_result = np.argmax(movement_predictions)
-            logString = paths[0] + " %.2f" % (time.time() - start_time) + "s " + self.movement_classes[
+            logString = paths[0] + " %.3f" % (time.time() - start_time) + "s " + self.movement_classes[
                 movement_result] + ' (' + "%.2f" % movement_predictions[movement_result] + ")"
 
             if movement_predictions[movement_result] > 0.75:
@@ -222,7 +189,7 @@ class Watcher():
             logger.debug(movement_predictions)
             index = 0
             result = np.argmax(movement_predictions)
-            logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
+            logString = elements[index][1] + " - %.3fs ---" % (time.time() - start_time) + " " + self.classes[
                 result] + ' (' + "%.2f" % movement_predictions[result] + ")"
             logger.info(logString)
             if movement_predictions[result] > 0.55:
@@ -279,8 +246,7 @@ class Watcher():
             self.tasks = [asyncio.create_task(self.handleNewPaths(session)) for _ in range(10)] +\
                          [asyncio.create_task(self.handleMovementPaths(session)) for _ in range(6)] +\
                          [asyncio.create_task(self.handleFailedPaths(session))] +\
-                         [asyncio.create_task(self.pathCleaner())] +\
-                         [asyncio.create_task(self.check_hosts())]
+                         [asyncio.create_task(self.pathCleaner())]
 
             await asyncio.gather(*self.tasks)
 
