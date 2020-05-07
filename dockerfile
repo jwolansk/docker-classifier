@@ -1,11 +1,11 @@
 FROM ubuntu:latest
 
 RUN apt-get update \
-    && apt-get install -y software-properties-common libssl-dev openssl python3.8
+    && apt-get install -y software-properties-common libssl-dev openssl python3.7
 
 RUN rm /usr/bin/python3
-RUN ln -s /usr/bin/python3.8 /usr/bin/python
-RUN ln -s /usr/bin/python3.8 /usr/bin/python3
+RUN ln -s /usr/bin/python3.7 /usr/bin/python
+RUN ln -s /usr/bin/python3.7 /usr/bin/python3
 
 RUN apt-get install -y python3-pip #python3-dev 
 RUN pip3 install --upgrade pip
