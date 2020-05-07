@@ -1,4 +1,5 @@
 .idea
 model.*
 model_objects.*
+*.tflite
 *~

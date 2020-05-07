@@ -12,6 +12,7 @@ import aiohttp
 import janus
 import socket
 import time
+import tensorflow as tf
 
 import os.path
 
@@ -35,20 +36,27 @@ image_width = 53
 image_height = 27
 channels = 3
 
+folder = "/data/" + CAMERA_NAME + "/"
 
 class Watcher():
     img = Image.new('RGB', (1, 1))
-    folder = "/data/" + CAMERA_NAME + "/"
+
     classes = ['carpassing', 'delivery', 'dodge', 'opel', 'personpassing', 'truck']
     movement_classes = ['yes', 'no']
-    client = mqtt.Client("docker-classifier-2.0")
+    client = mqtt.Client("docker-classifier-2.0-mbp")
 
     pathsChecked = {}
-    background_avg = np.load("/model/background_avg.npy")
+
 
     def __init__(self):
         self.observer = Observer()
 
+    def load_models(self):
+        path = ""
+        self.moveInterpreter = tf.lite.Interpreter(model_path=path + "movement.tflite")
+        self.moveInterpreter.allocate_tensors()
+        self.objectsInterpreter = tf.lite.Interpreter(model_path=path + "objects.tflite")
+        self.objectsInterpreter.allocate_tensors()
 
     async def check_hosts(self):
         logger.info("## creating new find hostname task")
@@ -153,49 +161,38 @@ class Watcher():
             self.pathsChecked[path] = datetime.now()
 
             logger.debug("## checking " + str(1) + " paths")
-            try:
-                start_time = time.time()
-                servingData = json.dumps(
-                    {"signature_name": "serving_default", "instances": data.tolist()})
-                headers = {"content-type": "application/json"}
 
-                url = 'http://' + hostname + ':8501/v1/models/movement:predict'
-                async with session.post(url, data=servingData, headers=headers) as response:
-                    json_response = await response.json()
+            start_time = time.time()
 
-                    predictions = json_response['predictions']
+            input_details = self.moveInterpreter.get_input_details()
+            output_details = self.moveInterpreter.get_output_details()
+            self.moveInterpreter.set_tensor(input_details[0]['index'], data)
 
-                    logger.debug("####### predictions")
-                    logger.debug(predictions)
-                    for index, movement_predictions in enumerate(predictions):
-                        movement_result = np.argmax(movement_predictions)
-                        logString = paths[index] + " %.2f" % (time.time() - start_time) + "s " + self.movement_classes[
-                            movement_result] + ' (' + "%.2f" % movement_predictions[movement_result] + ")"
+            self.moveInterpreter.invoke()
+            movement_predictions = list(self.moveInterpreter.get_tensor(output_details[0]['index'])[0])
 
-                        if movement_predictions[movement_result] > 0.75:
-                            if self.movement_classes[movement_result] == 'yes':
-                                element = (paths[index], logString, data[index])
-                                await self.highQ.put(element)
+            logger.debug("####### predictions")
+            logger.info(movement_predictions)
+            index = 0
+            movement_result = np.argmax(movement_predictions)
+            logString = paths[0] + " %.2f" % (time.time() - start_time) + "s " + self.movement_classes[
+                movement_result] + ' (' + "%.2f" % movement_predictions[movement_result] + ")"
 
-                                subprocess.call("cp '" + paths[index] + "' /data/gate/lastmove.jpg", shell=True)
-                                self.client.publish("gate/object", self.movement_classes[movement_result])
-                                continue
-                        yesnopath = "/data/" + CAMERA_NAME + "/" + self.movement_classes[movement_result]
-                        if not os.path.exists(yesnopath):
-                            subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
+            if movement_predictions[movement_result] > 0.75:
+                if self.movement_classes[movement_result] == 'yes':
+                    element = (paths[index], logString, data[index])
+                    await self.highQ.put(element)
 
-                        logger.info(logString)
-                        await asyncio.sleep(0.5)
-                        subprocess.call("mv '" + paths[index] + "' " + yesnopath, shell=True)
+                    subprocess.call("cp '" + paths[index] + "' /data/gate/lastmove.jpg", shell=True)
+                    self.client.publish("gate/object", self.movement_classes[movement_result])
+                    continue
+            yesnopath = "/data/" + CAMERA_NAME + "/" + self.movement_classes[movement_result]
+            if not os.path.exists(yesnopath):
+                subprocess.call('mkdir ' + yesnopath + " &> /dev/null", shell=True)
 
-            except aiohttp.client_exceptions.ClientConnectorError as exc:
-                logger.error(type(inst))
-                await self.q.async_q.put(path)
-
-            except Exception as inst:
-                logger.error(type(inst))  # the exception instance
-                logger.error(inst.args)  # arguments stored in .args
-                logger.error(inst)
+            logger.info(logString)
+            await asyncio.sleep(0.5)
+            subprocess.call("mv '" + paths[index] + "' " + yesnopath, shell=True)
 
 
     async def handleMovementPaths(self, session):
@@ -212,36 +209,29 @@ class Watcher():
             for index, image in enumerate(elements):
                 data[index] = image[2]
 
-            try:
-                start_time = time.time()
-                servingData = json.dumps(
-                    {"signature_name": "serving_default", "instances": data.tolist()})
-                headers = {"content-type": "application/json"}
+            start_time = time.time()
 
-                url = 'http://' + hostname + ':8501/v1/models/objects:predict'
-                async with session.post(url, data=servingData, headers=headers) as response:
-                    json_response = await response.json()
+            input_details = self.objectsInterpreter.get_input_details()
+            output_details = self.objectsInterpreter.get_output_details()
+            self.objectsInterpreter.set_tensor(input_details[0]['index'], data)
 
-                    predictions = json_response['predictions']
+            self.objectsInterpreter.invoke()
+            movement_predictions = list(self.objectsInterpreter.get_tensor(output_details[0]['index'])[0])
 
-                    logger.debug("####### predictions")
-                    logger.debug(predictions)
-                    for index, movement_predictions in enumerate(predictions):
-                        result = np.argmax(movement_predictions)
-                        logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
-                            result] + ' (' + "%.2f" % predictions[index][result] + ")"
-                        logger.info(logString)
-                        if predictions[index][result] > 0.55:
-                            self.client.publish("gate/object", self.classes[result])
-                        classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
-                        if not os.path.exists(classpath):
-                            subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
-                        subprocess.call("mv '" + elements[index][0] + "' " + classpath, shell=True)
+            logger.debug("####### predictions")
+            logger.debug(movement_predictions)
+            index = 0
+            result = np.argmax(movement_predictions)
+            logString = elements[index][1] + " - %.2fs ---" % (time.time() - start_time) + " " + self.classes[
+                result] + ' (' + "%.2f" % movement_predictions[result] + ")"
+            logger.info(logString)
+            if movement_predictions[result] > 0.55:
+                self.client.publish("gate/object", self.classes[result])
+            classpath = "/data/" + CAMERA_NAME + "/" + self.classes[result]
+            if not os.path.exists(classpath):
+                subprocess.call("mkdir " + classpath + " &> /dev/null", shell=True)
+            subprocess.call("mv '" + elements[index][0] + "' " + classpath, shell=True)
 
-            except Exception as inst:
-                logger.error(type(inst))  # the exception instance
-                logger.error(inst.args)  # arguments stored in .args
-                logger.error(inst)
 
     async def pathCleaner(self):
         while True:
@@ -261,6 +251,8 @@ class Watcher():
         self.q = janus.Queue()
         self.highQ = asyncio.Queue()
         self.failedQ = asyncio.Queue()
+
+        self.load_models()
 
         event_handler = Handler(q=self.q.sync_q, ignore_patterns=['/data/detected.jpg', '/data/' + CAMERA_NAME + '/lastmove.jpg', '*.DS_Store', '*.mp4'])
 
@@ -315,7 +307,7 @@ class Handler(PatternMatchingEventHandler):
 async def main():
 
     w = Watcher()
-    await w.run("/data/" + CAMERA_NAME + "/")
+    await w.run(folder)
 
 
 asyncio.run(main(), debug=False)
