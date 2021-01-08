@@ -1,3 +1,2 @@
 #!/usr/bin/env bash
-
-python /model/recognize.py
+python3 /model/recognize.py

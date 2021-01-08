@@ -1,23 +1,17 @@
-FROM ubuntu:latest
+#FROM ubuntu:bionic
+FROM python:3.7-buster
 
-RUN apt-get update \
-    && apt-get install -y software-properties-common libssl-dev openssl python3.7
-
-RUN rm /usr/bin/python3
-RUN ln -s /usr/bin/python3.7 /usr/bin/python
-RUN ln -s /usr/bin/python3.7 /usr/bin/python3
-
-RUN apt-get install -y python3-pip #python3-dev 
 RUN pip3 install --upgrade pip
 
 # comment the following 4 lines if you have AVX support
-COPY tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
-RUN /usr/bin/python --version
-RUN pip3 install --verbose /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
-RUN rm /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
+# download the following file from the internet
+#COPY tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
+#RUN /usr/bin/python --version
+#RUN pip3 install --verbose /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
+#RUN rm /src/tensorflow-2.0.0-cp37-cp37m-linux_x86_64.whl
 
 # uncomment the following line if you have AVX support
-#RUN pip3 install tensorflow
+RUN pip3 install tensorflow
 
 RUN pip3 install numpy scipy
 RUN pip3 install scikit-learn
